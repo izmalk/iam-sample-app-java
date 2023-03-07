@@ -23,3 +23,5 @@
 hs_err_pid*
 
 src/main/java/org/.DS_Store
+*.xml
+.idea/

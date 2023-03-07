@@ -19,15 +19,6 @@ import java.util.stream.Collectors;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-/*
-public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello world!");
-    }
-
-}
-*/
-
 public class Main {
     public static void main(String[] args) {
         System.out.println("IAM Sample App");
@@ -112,7 +103,7 @@ public class Main {
                         k += 1;
                         System.out.println("File #" + k + ": " + i);
                     }
-                    //System.out.println("Files found: " + k);
+                    //System.out.println("Files found (first batch): " + k);
                 }
 
                 List<String> answer2 = new ArrayList<>();
@@ -156,9 +147,8 @@ public class Main {
                         .insert(var("pa").rel("vav").rel("f").isa("access"));
                 System.out.println("Adding view access to the file");
                 List<ConceptMap> matchInsertedId = writeTransaction.query().insert(matchInsertQuery).collect(Collectors.toList());
-                //System.out.println("Inserted a relation with ID: " + matchInsertedId.get(0).get("pa").asThing().getIID());
-                // to persist changes, a write transaction must always be committed (closed)
-                writeTransaction.commit(); // commit the transaction
+                //System.out.println("Inserted a relation with iid: " + matchInsertedId.get(0).get("pa").asThing().getIID());
+                writeTransaction.commit(); // to persist changes, a write transaction must always be committed
             }
         }
         client.close(); // closing server connection
