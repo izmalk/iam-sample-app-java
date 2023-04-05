@@ -130,7 +130,8 @@ public class Main {
             System.out.println("");
             System.out.println("Request #4: Add a new file and a view access to it");
             try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) { // WRITE transaction is open
-                String filepath = "logs/" + DateTime.now() + ".log";
+                String timestamp = new SimpleDateFormat("yyyy-MM-dd-hh-mm-ss").format(new Date(System.currentTimeMillis()));
+                String filepath = "logs/" + timestamp + ".log";
                 // "insert $f isa file, has path '" + filepath + "';"
                 TypeQLInsert insertQuery = TypeQL.insert(var("f").isa("file").has("path", filepath));
                 System.out.println("Inserting file: " + filepath);
@@ -165,10 +166,3 @@ class PersonData {
     public String email;
 }
 
-class DateTime {
-    public static String now() {
-        SimpleDateFormat formatter = new SimpleDateFormat("Y-m-d-H-M-S");
-        Date date = new Date();
-        return(formatter.format(date));
-    }
-}
