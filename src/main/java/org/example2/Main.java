@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Main {
+    static int k = 0; // Counter
     public static void main(String[] args) {
         System.out.println("IAM Sample App");
 
@@ -31,22 +32,16 @@ public class Main {
             System.out.println("");
             System.out.println("Request #1: User listing");
             try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
-                List<PersonData> answer = new ArrayList<>(); // create a list for answers
+                k = 0; // reset the counter
                 readTransaction.query().match(
                         "match $u isa user, has full-name $n, has email $e;" // TypeQL query
-                ).forEach(result -> answer.add(new PersonData( // Store results as PersonData in the answer list
-                        result.get("n").asAttribute().asString().getValue(),
-                        result.get("e").asAttribute().asString().getValue())));
-                if (answer.isEmpty()) {
-                    System.out.println("Response is empty.");
-                } else {
-                    int k = 0; // create a counter
-                    for (PersonData i : answer) {
-                        k += 1;
-                        System.out.println("User #" + k + ": " + i.fullname + ", has E-mail: " + i.email);
-                    }
-                    System.out.println("Users found: " + k);
-                }
+                ).forEach(result -> {
+                    String name = result.get("n").asAttribute().asString().getValue();
+                    String email = result.get("e").asAttribute().asString().getValue();
+                    k += 1;
+                    System.out.println("User #" + k + ": " + name + ", has E-mail: " + email);
+                });
+                System.out.println("Users found: " + k);
             }
 
             System.out.println("");
@@ -67,7 +62,7 @@ public class Main {
                 if (answer.isEmpty()) {
                     System.out.println("Response is empty.");
                 } else {
-                    int k = 0; // create a counter
+                    k = 0; // reset the counter
                     for (String i : answer) {
                         k += 1;
                         System.out.println("File #" + k + ": " + i);
@@ -155,14 +150,3 @@ public class Main {
         client.close(); // closing server connection
     }
 }
-
-class PersonData {
-    public PersonData(String fullname, String email) {
-        this.fullname = fullname;
-        this.email = email;
-    }
-
-    public String fullname;
-    public String email;
-}
-
