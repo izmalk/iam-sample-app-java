@@ -9,12 +9,6 @@ import com.vaticle.typeql.lang.TypeQL;
 import static com.vaticle.typeql.lang.TypeQL.*;
 import com.vaticle.typeql.lang.query.TypeQLMatch;
 import com.vaticle.typeql.lang.query.TypeQLInsert;
-import com.vaticle.typedb.client.api.answer.ConceptMap;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -102,13 +96,11 @@ public class Main {
             System.out.println("");
             System.out.println("Request #4: Add a new file and a view access to it");
             try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) { // WRITE transaction is open
-                String filepath = "logs/" + new SimpleDateFormat("yyyy-MM-dd-hh-mm-ss").format(new Date(System.currentTimeMillis())) + ".log";
-
+                String filepath = "logs/" + new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSSZ").format(new Date(System.currentTimeMillis())) + ".log";
                 // "insert $f isa file, has path '" + filepath + "';"
                 TypeQLInsert insertQuery = TypeQL.insert(var("f").isa("file").has("path", filepath));
                 System.out.println("Inserting file: " + filepath);
                 writeTransaction.query().insert(insertQuery);
-
                 // "match $f isa file, has path '" + filepath + "';
                 // $vav isa action, has action-name 'view_file';
                 // insert ($vav, $f) isa access;"
