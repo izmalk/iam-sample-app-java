@@ -27,9 +27,9 @@ public class Main {
             System.out.println("Request #1: User listing");
             try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
                 k = 0; // reset the counter
-                readTransaction.query().match(
+                readTransaction.query().match( // Executing query
                         "match $u isa user, has full-name $n, has email $e;" // TypeQL query
-                ).forEach(result -> {
+                ).forEach(result -> { // Iterating through results
                     String name = result.get("n").asAttribute().asString().getValue();
                     String email = result.get("e").asAttribute().asString().getValue();
                     k += 1;
@@ -43,14 +43,14 @@ public class Main {
             try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
                 // String getQuery = "match $u isa user, has full-name 'Kevin Morrison'; $p($u, $pa) isa permission; " +
                 //        "$o isa object, has path $fp; $pa($o, $va) isa access; get $fp;"; // Example of the same TypeQL query
-                TypeQLMatch.Filtered getQuery = TypeQL.match(
+                TypeQLMatch.Filtered getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         var("u").isa("user").has("full-name", "Kevin Morrison"),
                         var("p").rel("u").rel("pa").isa("permission"),
                         var("o").isa("object").has("path", var("fp")),
                         var("pa").rel("o").rel("va").isa("access")
                 ).get("fp");
                 k = 0; // reset the counter
-                readTransaction.query().match(getQuery).forEach(result -> {
+                readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + result.get("fp").asAttribute().asString().getValue());
                 });
@@ -66,7 +66,7 @@ public class Main {
                 // $pa($o, $va) isa access;
                 // $va isa action, has action-name 'view_file';
                 // get $fp; sort $fp asc; offset 0; limit 5;"
-                TypeQLMatch.Limited getQuery = TypeQL.match(
+                TypeQLMatch.Limited getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         var("u").isa("user").has("full-name", "Kevin Morrison"),
                         var("p").rel("u").rel("pa").isa("permission"),
                         var("o").isa("object").has("path", var("fp")),
@@ -74,19 +74,19 @@ public class Main {
                         var("va").isa("action").has("action-name", "view_file")
                 ).get("fp").sort("fp").offset(0).limit(5);
                 k = 0; // reset the counter
-                readTransaction.query().match(getQuery).forEach(result -> {
+                readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + result.get("fp").asAttribute().asString().getValue());
                 });
 
-                getQuery = TypeQL.match(
+                getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         var("u").isa("user").has("full-name", "Kevin Morrison"),
                         var("p").rel("u").rel("pa").isa("permission"),
                         var("o").isa("object").has("path", var("fp")),
                         var("pa").rel("o").rel("va").isa("access"),
                         var("va").isa("action").has("action-name", "view_file")
                 ).get("fp").sort("fp").offset(5).limit(5);
-                readTransaction.query().match(getQuery).forEach(result -> {
+                readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + result.get("fp").asAttribute().asString().getValue());
                 });
@@ -98,20 +98,20 @@ public class Main {
             try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) { // WRITE transaction is open
                 String filepath = "logs/" + new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSSZ").format(new Date(System.currentTimeMillis())) + ".log";
                 // "insert $f isa file, has path '" + filepath + "';"
-                TypeQLInsert insertQuery = TypeQL.insert(var("f").isa("file").has("path", filepath));
+                TypeQLInsert insertQuery = TypeQL.insert(var("f").isa("file").has("path", filepath)); // Java query builder to prepare TypeQL query string
                 System.out.println("Inserting file: " + filepath);
-                writeTransaction.query().insert(insertQuery);
+                writeTransaction.query().insert(insertQuery); // Executing query
                 // "match $f isa file, has path '" + filepath + "';
                 // $vav isa action, has action-name 'view_file';
                 // insert ($vav, $f) isa access;"
-                insertQuery = TypeQL.match(
+                insertQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         var("f").isa("file").has("path", filepath),
                         var("vav").isa("action").has("action-name", "view_file")
                                 )
                         .insert(var("pa").rel("vav").rel("f").isa("access"));
                 System.out.println("Adding view access to the file");
-                writeTransaction.query().insert(insertQuery);
-                writeTransaction.commit(); // to persist changes, a write transaction must always be committed
+                writeTransaction.query().insert(insertQuery); // Executing query
+                writeTransaction.commit(); // to persist changes, a 'write' transaction must be committed
             }
         }
         client.close(); // closing server connection
