@@ -64,14 +64,14 @@ public class Main {
                 // $p($u, $pa) isa permission;
                 // $o isa object, has path $fp;
                 // $pa($o, $va) isa access;
-                // $va isa action, has action-name 'view_file';
+                // $va isa action, has name 'view_file';
                 // get $fp; sort $fp asc; offset 0; limit 5;"
                 TypeQLMatch.Limited getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         var("u").isa("user").has("full-name", "Kevin Morrison"),
                         var("p").rel("u").rel("pa").isa("permission"),
                         var("o").isa("object").has("path", var("fp")),
                         var("pa").rel("o").rel("va").isa("access"),
-                        var("va").isa("action").has("action-name", "view_file")
+                        var("va").isa("action").has("name", "view_file")
                 ).get("fp").sort("fp").offset(0).limit(5);
                 k = 0; // reset the counter
                 readTransaction.query().match(getQuery).forEach(result -> { // Executing query
@@ -84,7 +84,7 @@ public class Main {
                         var("p").rel("u").rel("pa").isa("permission"),
                         var("o").isa("object").has("path", var("fp")),
                         var("pa").rel("o").rel("va").isa("access"),
-                        var("va").isa("action").has("action-name", "view_file")
+                        var("va").isa("action").has("name", "view_file")
                 ).get("fp").sort("fp").offset(5).limit(5);
                 readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
@@ -102,11 +102,11 @@ public class Main {
                 System.out.println("Inserting file: " + filepath);
                 writeTransaction.query().insert(insertQuery); // Executing query
                 // "match $f isa file, has path '" + filepath + "';
-                // $vav isa action, has action-name 'view_file';
+                // $vav isa action, has name 'view_file';
                 // insert ($vav, $f) isa access;"
                 insertQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         var("f").isa("file").has("path", filepath),
-                        var("vav").isa("action").has("action-name", "view_file")
+                        var("vav").isa("action").has("name", "view_file")
                                 )
                         .insert(var("pa").rel("vav").rel("f").isa("access"));
                 System.out.println("Adding view access to the file");
