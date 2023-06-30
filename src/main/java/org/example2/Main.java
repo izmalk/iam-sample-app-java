@@ -44,11 +44,11 @@ public class Main {
                 // String getQuery = "match $u isa user, has full-name 'Kevin Morrison'; $p($u, $pa) isa permission; " +
                 //        "$o isa object, has path $fp; $pa($o, $va) isa access; get $fp;"; // Example of the same TypeQL query
                 TypeQLMatch.Filtered getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
-                        var("u").isa("user").has("full-name", "Kevin Morrison"),
-                        var("p").rel("u").rel("pa").isa("permission"),
-                        var("o").isa("object").has("path", var("fp")),
-                        var("pa").rel("o").rel("va").isa("access")
-                ).get("fp");
+                        cVar("u").isa("user").has("full-name", "Kevin Morrison"),
+                        cVar("p").rel(cVar("u")).rel(cVar("pa")).isa("permission"),
+                        cVar("o").isa("object").has("path", cVar("fp")),
+                        cVar("pa").rel(cVar("o")).rel(cVar("va")).isa("access")
+                ).get(cVar("fp"));
                 k = 0; // reset the counter
                 readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
@@ -67,12 +67,12 @@ public class Main {
                 // $va isa action, has name 'view_file';
                 // get $fp; sort $fp asc; offset 0; limit 5;"
                 TypeQLMatch.Limited getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
-                        var("u").isa("user").has("full-name", "Kevin Morrison"),
-                        var("p").rel("u").rel("pa").isa("permission"),
-                        var("o").isa("object").has("path", var("fp")),
-                        var("pa").rel("o").rel("va").isa("access"),
-                        var("va").isa("action").has("name", "view_file")
-                ).get("fp").sort("fp").offset(0).limit(5);
+                        cVar("u").isa("user").has("full-name", "Kevin Morrison"),
+                        cVar("p").rel(cVar("u")).rel(cVar("pa")).isa("permission"),
+                        cVar("o").isa("object").has("path", cVar("fp")),
+                        cVar("pa").rel(cVar("o")).rel(cVar("va")).isa("access"),
+                        cVar("va").isa("action").has("name", "view_file")
+                ).get(cVar("fp")).sort(cVar("fp")).offset(0).limit(5);
                 k = 0; // reset the counter
                 readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
@@ -80,12 +80,12 @@ public class Main {
                 });
 
                 getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
-                        var("u").isa("user").has("full-name", "Kevin Morrison"),
-                        var("p").rel("u").rel("pa").isa("permission"),
-                        var("o").isa("object").has("path", var("fp")),
-                        var("pa").rel("o").rel("va").isa("access"),
-                        var("va").isa("action").has("name", "view_file")
-                ).get("fp").sort("fp").offset(5).limit(5);
+                        cVar("u").isa("user").has("full-name", "Kevin Morrison"),
+                        cVar("p").rel(cVar("u")).rel(cVar("pa")).isa("permission"),
+                        cVar("o").isa("object").has("path", cVar("fp")),
+                        cVar("pa").rel(cVar("o")).rel(cVar("va")).isa("access"),
+                        cVar("va").isa("action").has("name", "view_file")
+                ).get(cVar("fp")).sort(cVar("fp")).offset(5).limit(5);
                 readTransaction.query().match(getQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + result.get("fp").asAttribute().asString().getValue());
@@ -96,19 +96,20 @@ public class Main {
             System.out.println("");
             System.out.println("Request #4: Add a new file and a view access to it");
             try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) { // WRITE transaction is open
-                String filepath = "logs/" + new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSSZ").format(new Date(System.currentTimeMillis())) + ".log";
+                String filepath = "logs/" + new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").format(new Date(System.currentTimeMillis())) + ".log";
                 // "insert $f isa file, has path '" + filepath + "';"
-                TypeQLInsert insertQuery = TypeQL.insert(var("f").isa("file").has("path", filepath)); // Java query builder to prepare TypeQL query string
+                TypeQLInsert insertQuery = TypeQL.insert(cVar("f").isa("file").has("path", filepath)); // Java query builder to prepare TypeQL query string
                 System.out.println("Inserting file: " + filepath);
+                // TypeQLInsert insertQuery = TypeQL.insert(cVar("f").isa("file").has("path", "logs/2023-06-30T12:04:36.351+0100.log"));
                 writeTransaction.query().insert(insertQuery); // Executing query
                 // "match $f isa file, has path '" + filepath + "';
                 // $vav isa action, has name 'view_file';
                 // insert ($vav, $f) isa access;"
                 insertQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
-                        var("f").isa("file").has("path", filepath),
-                        var("vav").isa("action").has("name", "view_file")
+                        cVar("f").isa("file").has("path", filepath),
+                        cVar("vav").isa("action").has("name", "view_file")
                                 )
-                        .insert(var("pa").rel("vav").rel("f").isa("access"));
+                        .insert(cVar("pa").rel(cVar("vav")).rel(cVar("f")).isa("access"));
                 System.out.println("Adding view access to the file");
                 writeTransaction.query().insert(insertQuery); // Executing query
                 writeTransaction.commit(); // to persist changes, a 'write' transaction must be committed
