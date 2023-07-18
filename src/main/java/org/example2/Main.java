@@ -22,6 +22,8 @@ public class Main {
         TypeDBClient client = TypeDB.coreClient("0.0.0.0:1729"); // client is connected to the server
         System.out.println("Connecting to the `iam` database");
         try (TypeDBSession session = client.session("iam", TypeDBSession.Type.DATA)) { // session is open
+            // #todo Add DB manipulation request (check, create or re-create a DB)
+            // #todo Add a define request
 
             System.out.println("");
             System.out.println("Request #1: User listing");
@@ -113,6 +115,18 @@ public class Main {
                 System.out.println("Adding view access to the file");
                 writeTransaction.query().insert(insertQuery); // Executing query
                 writeTransaction.commit(); // to persist changes, a 'write' transaction must be committed
+            }
+
+            System.out.println("");
+            System.out.println("Request #5: Computation");
+            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
+                String computationQuery = "match $f isa file, has size-kb $sk; ?sm = $sk / 1024;";
+                k = 0; // reset the counter
+                readTransaction.query().match(computationQuery).forEach(result -> { // Executing query
+                    k += 1;
+                    System.out.println("File #" + k + ": " + " size in MB: " + result.get("sm").asValue().getValue());
+                });
+                System.out.println("Files found: " + k);
             }
         }
         client.close(); // closing server connection
