@@ -7,11 +7,15 @@ import com.vaticle.typedb.client.api.TypeDBTransaction;
 import com.vaticle.typedb.client.TypeDB;
 import com.vaticle.typeql.lang.TypeQL;
 import static com.vaticle.typeql.lang.TypeQL.*;
+
+//import com.vaticle.typeql.lang.common.TypeQLToken;
 import com.vaticle.typeql.lang.query.TypeQLMatch;
 import com.vaticle.typeql.lang.query.TypeQLInsert;
 
 import java.text.SimpleDateFormat;
+//import java.util.Collections;
 import java.util.Date;
+//import java.util.Set;
 
 public class Main {
     static int k = 0; // Counter
@@ -125,6 +129,11 @@ public class Main {
                 readTransaction.query().match(computationQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + " size in MB: " + result.get("sm").asValue().getValue());
+/*                    Set<TypeQLToken.Annotation> annotations = Collections.emptySet();
+                    result.get("f").asThing().asRemote(readTransaction).getHas(
+
+                            annotations
+                    ).forEach(attr -> System.out.println("---" + attr.getValue()));*/
                 });
                 System.out.println("Files found: " + k);
             }
