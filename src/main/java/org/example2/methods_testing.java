@@ -1,7 +1,7 @@
 package org.example2;
 
-import com.vaticle.typedb.client.TypeDB;
-import com.vaticle.typedb.client.api.TypeDBClient;
+import com.vaticle.typedb.driver.TypeDB;
+import com.vaticle.typedb.driver.api.TypeDBDriver;
 
 public class methods_testing {
     static int k = 0; // Counter
@@ -10,11 +10,11 @@ public class methods_testing {
         System.out.println("IAM database list");
 
         System.out.println("Connecting to the server");
-        TypeDBClient client = TypeDB.coreClient("0.0.0.0:1729"); // client is connected to the server
-        client.databases().all().forEach(db -> {
+        TypeDBDriver driver = TypeDB.coreDriver("0.0.0.0:1729"); // driver is connected to the server
+        driver.databases().all().forEach(db -> {
             k += 1;
             System.out.println(k + ": " + db.name());
         });
-        client.close(); // closing server connection
+        driver.close(); // closing server connection
     }
 }
