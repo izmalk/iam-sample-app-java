@@ -1,9 +1,6 @@
 package org.example2;
 
-import com.vaticle.typedb.driver.api.TypeDBDriver;
-import com.vaticle.typedb.driver.api.TypeDBOptions;
-import com.vaticle.typedb.driver.api.TypeDBSession;
-import com.vaticle.typedb.driver.api.TypeDBTransaction;
+import com.vaticle.typedb.driver.api.*;
 import com.vaticle.typedb.driver.TypeDB;
 import com.vaticle.typeql.lang.TypeQL;
 import static com.vaticle.typeql.lang.TypeQL.*;
@@ -21,10 +18,10 @@ import java.util.Date;
 public class Main {
     static int k = 0; // Counter
     public static void main(String[] args) {
-        System.out.println("IAM Sample App");
+        System.out.println("IAM Sample App - Enterprise edition");
 
         System.out.println("Connecting to the server");
-        TypeDBDriver driver = TypeDB.coreDriver("0.0.0.0:1729"); // driver is connected to the server
+        TypeDBDriver driver = TypeDB.enterpriseDriver("127.0.0.1:1729", new TypeDBCredential("admin", "password", false )); // the driver is connected to the server
         System.out.println("Connecting to the `iam` database");
         try (TypeDBSession session = driver.session("iam", TypeDBSession.Type.DATA)) { // session is open
             // #todo Add DB manipulation request (check, create or re-create a DB)
