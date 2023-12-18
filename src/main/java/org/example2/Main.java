@@ -5,37 +5,79 @@ import com.vaticle.typedb.driver.api.TypeDBOptions;
 import com.vaticle.typedb.driver.api.TypeDBSession;
 import com.vaticle.typedb.driver.api.TypeDBTransaction;
 import com.vaticle.typedb.driver.TypeDB;
+import com.vaticle.typedb.driver.api.query.QueryManager;
+import com.vaticle.typedb.driver.common.Promise;
 import com.vaticle.typeql.lang.TypeQL;
 import static com.vaticle.typeql.lang.TypeQL.*;
-
-//import com.vaticle.typeql.lang.common.TypeQLToken;
 import com.vaticle.typeql.lang.query.TypeQLGet;
 import com.vaticle.typeql.lang.query.TypeQLInsert;
 
-import java.security.KeyStore;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-//import java.util.Collections;
 import java.util.Date;
-//import java.util.Set;
 
 public class Main {
     static int k = 0; // Counter
     public static void main(String[] args) {
+        final String dbName = "iam"; // Name of a database to connect to
+        final String serverAddr = "127.0.0.1:1729"; // Address of a TypeDB Core server to connect to
+
         System.out.println("IAM Sample App");
 
-        System.out.println("Connecting to the server");
-        TypeDBDriver driver = TypeDB.coreDriver("0.0.0.0:1729"); // driver is connected to the server
-        System.out.println("Connecting to the `iam` database");
-        try (TypeDBSession session = driver.session("iam", TypeDBSession.Type.DATA)) { // session is open
-            // #todo Add DB manipulation request (check, create or re-create a DB)
-            // #todo Add a define request
+        System.out.println("Attempting to connect to a TypeDB Core server: " + serverAddr);
+        TypeDBDriver driver = TypeDB.coreDriver(serverAddr); // the driver is connected to the server
+        if (driver.databases().contains(dbName)) {
+            System.out.println("Found a pre-existing database! Re-creating with the default schema and data...");
+            driver.databases().get(dbName).delete();
+        }
+        driver.databases().create(dbName);
+        if (driver.databases().contains(dbName)) {
+            System.out.println("Empty database created");
+        }
+        System.out.println("Opening a Schema session to define a schema.");
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.SCHEMA)) {
+            try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) {
+                String defineQuery = Files.readString(Paths.get("iam-schema.tql"));
+                writeTransaction.query().define(defineQuery);
+                writeTransaction.commit();
 
-            System.out.println(" ");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        System.out.println("Opening a Data session to insert data.");
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
+            try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) {
+                String insertQuery = Files.readString(Paths.get("iam-data-single-query.tql"));
+                writeTransaction.query().insert(insertQuery);
+                writeTransaction.commit();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            System.out.println("Testing the new database.");
+            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // Re-using a session to open a new transaction
+                long result = readTransaction.query().getAggregate("match $u isa user; get $u; count;").resolve().get().asLong();
+                if (result == 3) {
+                    System.out.println("Database setup complete. Test passed.");
+                } else {
+                    System.out.println("Test failed with the following result:" + result + " expected result: 3.");
+                    System.exit(0);
+                }
+            }
+        }
+
+        System.out.println("Commencing sample requests");
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) { // session is open
+
+            System.out.println("");
             System.out.println("Request #1: User listing");
             try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
                 k = 0; // reset the counter
                 readTransaction.query().get( // Executing query
-                        "match $u isa user, has full-name $n, has email $e; get $u, $n, $e;" // TypeQL query
+                        "match $u isa user, has full-name $n, has email $e; get;" // TypeQL query
                 ).forEach(result -> { // Iterating through results
                     String name = result.get("n").asAttribute().getValue().asString();
                     String email = result.get("e").asAttribute().getValue().asString();
@@ -45,7 +87,7 @@ public class Main {
                 System.out.println("Users found: " + k);
             }
 
-            System.out.println(" ");
+            System.out.println("");
             System.out.println("Request #2: Files that Kevin Morrison has access to");
             try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
                 // String getQuery = "match $u isa user, has full-name 'Kevin Morrison'; $p($u, $pa) isa permission; " +
@@ -66,7 +108,8 @@ public class Main {
 
             System.out.println("");
             System.out.println("Request #3: Files that Kevin Morrison has view access to (with inference)");
-            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ, new TypeDBOptions().infer(true))) { // READ transaction is open
+            TypeDBOptions options = new TypeDBOptions().infer(true);
+            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ, options)) { // READ transaction is open
                 // String getQuery = "match $u isa user, has full-name 'Kevin Morrison';
                 // $p($u, $pa) isa permission;
                 // $o isa object, has path $fp;
@@ -107,7 +150,6 @@ public class Main {
                 // "insert $f isa file, has path '" + filepath + "';"
                 TypeQLInsert insertQuery = TypeQL.insert(cVar("f").isa("file").has("path", filepath)); // Java query builder to prepare TypeQL query string
                 System.out.println("Inserting file: " + filepath);
-                // TypeQLInsert insertQuery = TypeQL.insert(cVar("f").isa("file").has("path", "logs/2023-06-30T12:04:36.351+0100.log"));
                 writeTransaction.query().insert(insertQuery); // Executing query
                 // "match $f isa file, has path '" + filepath + "';
                 // $vav isa action, has name 'view_file';
@@ -115,28 +157,12 @@ public class Main {
                 insertQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         cVar("f").isa("file").has("path", filepath),
                         cVar("vav").isa("action").has("name", "view_file")
-                                )
-                        .insert(cVar("pa").rel(cVar("vav")).rel(cVar("f")).isa("access"));
+                ).insert(
+                    cVar("pa").rel(cVar("vav")).rel(cVar("f")).isa("access")
+                );
                 System.out.println("Adding view access to the file");
                 writeTransaction.query().insert(insertQuery); // Executing query
                 writeTransaction.commit(); // to persist changes, a 'write' transaction must be committed
-            }
-
-            System.out.println(" ");
-            System.out.println("Request #5: Computation");
-            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
-                String computationQuery = "match $f isa file, has size-kb $sk; ?sm = $sk / 1024; get ?sm;";
-                k = 0; // reset the counter
-                readTransaction.query().get(computationQuery).forEach(result -> { // Executing query
-                    k += 1;
-                    System.out.println("File #" + k + ": " + " size in MB: " + result.get("sm").asValue().asDouble());
-/*                    Set<TypeQLToken.Annotation> annotations = Collections.emptySet();
-                    result.get("f").asThing().asRemote(readTransaction).getHas(
-
-                            annotations
-                    ).forEach(attr -> System.out.println("---" + attr.getValue()));*/
-                });
-                System.out.println("Files found: " + k);
             }
         }
         driver.close(); // closing server connection
