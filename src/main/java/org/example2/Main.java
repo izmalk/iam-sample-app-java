@@ -5,8 +5,6 @@ import com.vaticle.typedb.driver.api.TypeDBOptions;
 import com.vaticle.typedb.driver.api.TypeDBSession;
 import com.vaticle.typedb.driver.api.TypeDBTransaction;
 import com.vaticle.typedb.driver.TypeDB;
-import com.vaticle.typedb.driver.api.query.QueryManager;
-import com.vaticle.typedb.driver.common.Promise;
 import com.vaticle.typeql.lang.TypeQL;
 import static com.vaticle.typeql.lang.TypeQL.*;
 import com.vaticle.typeql.lang.query.TypeQLGet;
@@ -70,14 +68,14 @@ public class Main {
         }
 
         System.out.println("Commencing sample requests");
-        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) { // session is open
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
 
             System.out.println("");
             System.out.println("Request #1: User listing");
-            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
+            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) {
                 k = 0; // reset the counter
                 readTransaction.query().get( // Executing query
-                        "match $u isa user, has full-name $n, has email $e; get;" // TypeQL query
+                        "match $u isa user, has full-name $n, has email $e; get;" // TypeQL query string
                 ).forEach(result -> { // Iterating through results
                     String name = result.get("n").asAttribute().getValue().asString();
                     String email = result.get("e").asAttribute().getValue().asString();
@@ -89,16 +87,14 @@ public class Main {
 
             System.out.println("");
             System.out.println("Request #2: Files that Kevin Morrison has access to");
-            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) { // READ transaction is open
-                // String getQuery = "match $u isa user, has full-name 'Kevin Morrison'; $p($u, $pa) isa permission; " +
-                //        "$o isa object, has path $fp; $pa($o, $va) isa access; get $fp;"; // Example of the same TypeQL query
+            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ)) {
                 TypeQLGet getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         cVar("u").isa("user").has("full-name", "Kevin Morrison"),
                         cVar("p").rel(cVar("u")).rel(cVar("pa")).isa("permission"),
                         cVar("o").isa("object").has("path", cVar("fp")),
                         cVar("pa").rel(cVar("o")).rel(cVar("va")).isa("access")
                 ).get(cVar("fp"));
-                k = 0; // reset the counter
+                k = 0;
                 readTransaction.query().get(getQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + result.get("fp").asAttribute().getValue().asString());
@@ -109,13 +105,7 @@ public class Main {
             System.out.println("");
             System.out.println("Request #3: Files that Kevin Morrison has view access to (with inference)");
             TypeDBOptions options = new TypeDBOptions().infer(true);
-            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ, options)) { // READ transaction is open
-                // String getQuery = "match $u isa user, has full-name 'Kevin Morrison';
-                // $p($u, $pa) isa permission;
-                // $o isa object, has path $fp;
-                // $pa($o, $va) isa access;
-                // $va isa action, has name 'view_file';
-                // get $fp; sort $fp asc; offset 0; limit 5;"
+            try (TypeDBTransaction readTransaction = session.transaction(TypeDBTransaction.Type.READ, options)) {
                 TypeQLGet getQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
                         cVar("u").isa("user").has("full-name", "Kevin Morrison"),
                         cVar("p").rel(cVar("u")).rel(cVar("pa")).isa("permission"),
@@ -123,7 +113,7 @@ public class Main {
                         cVar("pa").rel(cVar("o")).rel(cVar("va")).isa("access"),
                         cVar("va").isa("action").has("name", "view_file")
                 ).get(cVar("fp")).sort(cVar("fp")).offset(0).limit(5);
-                k = 0; // reset the counter
+                k = 0;
                 readTransaction.query().get(getQuery).forEach(result -> { // Executing query
                     k += 1;
                     System.out.println("File #" + k + ": " + result.get("fp").asAttribute().getValue().asString());
@@ -147,22 +137,18 @@ public class Main {
             System.out.println("Request #4: Add a new file and a view access to it");
             try (TypeDBTransaction writeTransaction = session.transaction(TypeDBTransaction.Type.WRITE)) { // WRITE transaction is open
                 String filepath = "logs/" + new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").format(new Date(System.currentTimeMillis())) + ".log";
-                // "insert $f isa file, has path '" + filepath + "';"
-                TypeQLInsert insertQuery = TypeQL.insert(cVar("f").isa("file").has("path", filepath)); // Java query builder to prepare TypeQL query string
+                TypeQLInsert insertQuery = TypeQL.insert(cVar("f").isa("file").has("path", filepath));
                 System.out.println("Inserting file: " + filepath);
-                writeTransaction.query().insert(insertQuery); // Executing query
-                // "match $f isa file, has path '" + filepath + "';
-                // $vav isa action, has name 'view_file';
-                // insert ($vav, $f) isa access;"
-                insertQuery = TypeQL.match( // Java query builder to prepare TypeQL query string
+                writeTransaction.query().insert(insertQuery); // Executing the query
+                insertQuery = TypeQL.match(
                         cVar("f").isa("file").has("path", filepath),
                         cVar("vav").isa("action").has("name", "view_file")
                 ).insert(
                     cVar("pa").rel(cVar("vav")).rel(cVar("f")).isa("access")
                 );
                 System.out.println("Adding view access to the file");
-                writeTransaction.query().insert(insertQuery); // Executing query
-                writeTransaction.commit(); // to persist changes, a 'write' transaction must be committed
+                writeTransaction.query().insert(insertQuery); // Executing the second query
+                writeTransaction.commit();
             }
         }
         driver.close(); // closing server connection
