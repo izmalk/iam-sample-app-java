@@ -16,7 +16,7 @@
 
     <repositories>
         <repository>
-            <id>repo.vaticle.com</id>
+            <id>repo.typedb.com</id>
                 <url>https://repo.typedb.com/public/public-release/maven</url>
         </repository>
     </repositories>
