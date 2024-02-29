@@ -7,7 +7,6 @@ import com.vaticle.typedb.driver.api.TypeDBTransaction;
 import com.vaticle.typedb.driver.api.answer.ConceptMap;
 import com.vaticle.typedb.driver.TypeDB;
 import com.vaticle.typedb.driver.api.answer.JSON;
-import com.vaticle.typedb.driver.api.concept.thing.Attribute;
 import com.vaticle.typedb.driver.common.exception.TypeDBDriverException;
 
 import java.io.IOException;
@@ -15,19 +14,17 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
-// import com.vaticle.typedb.driver.common.exception.TypeDBDriverException;
-// import com.vaticle.typedb.driver.connection.TypeDBDriverBuilder;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 public class Main {
 
     private static final String DB_NAME = "sample_app_db";
     private static final String SERVER_ADDR = "127.0.0.1:1729";
 
-    public static void main() {
-        boolean dbReset = parseArguments();
+    public static void main(String[] args) {
         try (TypeDBDriver driver = TypeDB.coreDriver(SERVER_ADDR)) {
-            if (dbSetup(driver, DB_NAME, dbReset)) {
+            if (dbSetup(driver, DB_NAME, false)) {
                 System.out.println("Setup complete.");
             } else {
                 System.out.println("Setup failed.");
@@ -60,7 +57,7 @@ public class Main {
 
             String sixthRequestMessage = String.format("Request 6 of 6: Delete the file with path \"%s\"", new_path);
             System.out.println(sixthRequestMessage);
-            boolean deleted = deleteFile(driver, path);
+            boolean deleted = deleteFile(driver, new_path);
 
         } catch (TypeDBDriverException e) {
             e.printStackTrace();
@@ -73,7 +70,7 @@ public class Main {
             try (TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.READ)) {
                 String query = "match $u isa user; fetch $u: full-name, email;";
                 List<JSON> answers = tx.query().fetch(query).toList();
-                answers.forEach(json -> System.out.println("JSON: " + json.asString()));
+                answers.forEach(json -> System.out.println("JSON: " + json.toString()));
                 return answers;
             }
         }
@@ -120,46 +117,41 @@ public class Main {
                                                 get $fp;""", name);
                 // Note: Sorting in the query might not be directly supported; handle sorting in Java if needed
                 tx.query().get(fileQuery).forEach(filePaths::add);
+                filePaths.forEach(path -> System.out.println("File: " + path.get("fp").asAttribute().getValue().toString()));
+                if (filePaths.isEmpty()) {
+                    System.out.println("No files found. Try enabling inference.");
+                }
+                return filePaths;
             } else {
-                System.out.println("Warning: No users found with that name. Extending search for full-names containing the provided search string.");
-                String fileQuery = String.format("""
-                                                match
-                                                $fn contains '%s';
-                                                $u isa user, has full-name $fn;
-                                                $p($u, $pa) isa permission;
-                                                $o isa object, has path $fp;
-                                                $pa($o, $va) isa access;
-                                                $va isa action, has name 'view_file';
-                                                get $fp;""", name);
-                tx.query().get(fileQuery).forEach(filePaths::add);
-            }
-            filePaths.forEach(path -> System.out.println("File: " + path));
-            if (filePaths.isEmpty()) {
-                System.out.println("No files found. Try enabling inference.");
+                System.out.println("Warning: No users found with that name.");
+                return null;
             }
         } catch (TypeDBDriverException e) {
             e.printStackTrace();
+            return null;
         }
-        return filePaths;
     }
 
     public static List<ConceptMap> updateFilePath(TypeDBDriver driver, String oldPath, String newPath) {
+        List<ConceptMap> response = new ArrayList<>();
         try (TypeDBSession session = driver.session(DB_NAME, TypeDBSession.Type.DATA);
              TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.WRITE)) {
             String query = String.format("""
                                         match
-                                        $f isa file, has path '%s';
+                                        $f isa file, has path $old_path;
+                                        $old_path = '%s';
                                         delete
-                                        $f has path '%s';
+                                        $f has $old_path;
                                         insert
-                                        $f has path '%s';""", oldPath, oldPath, newPath);
-            List<ConceptMap> response = tx.query().update(query).toList();
+                                        $f has path '%s';""", oldPath, newPath);
+            response = tx.query().update(query).toList();
             tx.commit();
             System.out.println("Path updated from " + oldPath + " to " + newPath);
             return response;
         } catch (TypeDBDriverException e) {
             e.printStackTrace();
         }
+        return response;
     }
 
     public static boolean deleteFile(TypeDBDriver driver, String path) {
@@ -187,39 +179,23 @@ public class Main {
         }
     }
 
-    private static boolean parseArguments() {
-        return true;
-    }
-
     private static boolean dbSetup(TypeDBDriver driver, String dbName, boolean reset) {
         System.out.println("Setting up the database: " + dbName);
-        if (reset) {
-            if (!createNewDatabase(driver, dbName, reset)) {
-                return false;
-            }
+        boolean newDatabase = createNewDatabase(driver, dbName, reset);
+        if (!driver.databases().contains(dbName)) {
+            System.out.println("Database creation failed. Terminating...");
+            return false;
+        }
+        if (newDatabase) {
             try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.SCHEMA)) {
                 dbSchemaSetup(session);
             }
             try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
                 dbDatasetSetup(session);
-                if (testInitialDatabase(session)) {
-                    System.out.println("Database setup complete.");
-                    return true;
-                } else {
-                    System.out.println("Database setup failed.");
-                    return false;
-                }
             }
-        } else {
-            try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
-                if (testInitialDatabase(session)) {
-                    System.out.println("Database is ready.");
-                    return true;
-                } else {
-                    System.out.println("The existing database failed testing. Consider resetting the database.");
-                    return false;
-                }
-            }
+        }
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
+            return testInitialDatabase(session);
         }
     }
 
@@ -230,19 +206,30 @@ public class Main {
                 driver.databases().get(dbName).delete();
                 driver.databases().create(dbName);
                 System.out.println("OK");
-            } else {
-                System.out.println("Reusing an existing database. To reset the database, consider using the --reset argument.");
+                return true;
+            } else { // dbReset = false
+                System.out.println("Found a pre-existing database. Do you want to replace it? (Y/N) ");
+                String answer;
+                try {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+                    answer = reader.readLine();
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to read schema file.", e);
+                }
+                // String answer = System.console().readLine();
+                if (answer.equalsIgnoreCase("y")) {
+                    return createNewDatabase(driver, dbName, true);
+                } else {
+                    System.out.println("Reusing an existing database.");
+                    return false;
+                }
             }
-        } else {
+        } else { // No such database found on the server
             System.out.print("Creating a new database...");
             driver.databases().create(dbName);
             System.out.println("OK");
+            return true;
         }
-        if (!driver.databases().contains(dbName)) {
-            System.out.println("Database creation failed. Terminating...");
-            return false;
-        }
-        return true;
     }
 
     private static void dbSchemaSetup(TypeDBSession session) {
