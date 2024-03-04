@@ -1,5 +1,6 @@
 package org.example2;
-
+// tag::code[]
+// tag::import[]
 import com.vaticle.typedb.driver.api.*;
 import com.vaticle.typedb.driver.api.answer.ConceptMap;
 import com.vaticle.typedb.driver.TypeDB;
@@ -13,9 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-
+// end::import[]
+// tag::class-main[]
 public class Main {
-
+    // tag::constants[]
     private static final String DB_NAME = "sample_app_db";
     private static final String SERVER_ADDR = "127.0.0.1:1729";
 
@@ -25,7 +27,8 @@ public class Main {
     }
 
     private static final Edition TYPEDB_EDITION = Edition.CORE;
-
+    // end::constants[]
+    // tag::main[]
     public static void main(String[] args) {
         try (TypeDBDriver driver = connection(TYPEDB_EDITION, SERVER_ADDR)) {
             if (dbSetup(driver, DB_NAME, false)) {
@@ -67,7 +70,8 @@ public class Main {
             e.printStackTrace();
         }
     }
-
+    // end::main[]
+    // tag::connection[]
     private static TypeDBDriver connection(Edition edition, String addr) {
         if (edition == Edition.CORE) {
             return TypeDB.coreDriver(addr);
@@ -77,7 +81,8 @@ public class Main {
         };
         return null;
     }
-
+    // end::connection[]
+    // tag::fetch[]
     private static List<JSON> fetchAllUsers(TypeDBDriver driver) {
         try (TypeDBSession session = driver.session(DB_NAME, TypeDBSession.Type.DATA)) {
             try (TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.READ)) {
@@ -88,7 +93,8 @@ public class Main {
             }
         }
     }
-
+    // end::fetch[]
+    // tag::insert[]
     public static List<ConceptMap> insertNewUser(TypeDBDriver driver, String name, String email) {
         try (TypeDBSession session = driver.session(DB_NAME, TypeDBSession.Type.DATA)) {
             try (TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.WRITE)) {
@@ -105,7 +111,8 @@ public class Main {
             }
         }
     }
-
+    // end::insert[]
+    // tag::get[]
     public static List<ConceptMap> getFilesByUser(TypeDBDriver driver, String name, boolean inference) {
         List<ConceptMap> filePaths = new ArrayList<>();
         TypeDBOptions options = new TypeDBOptions().infer(inference);
@@ -144,7 +151,8 @@ public class Main {
             return null;
         }
     }
-
+    // end::get[]
+    // tag::update[]
     public static List<ConceptMap> updateFilePath(TypeDBDriver driver, String oldPath, String newPath) {
         List<ConceptMap> response = new ArrayList<>();
         try (TypeDBSession session = driver.session(DB_NAME, TypeDBSession.Type.DATA);
@@ -166,7 +174,8 @@ public class Main {
         }
         return response;
     }
-
+    // end::update[]
+    // tag::delete[]
     public static boolean deleteFile(TypeDBDriver driver, String path) {
         try (TypeDBSession session = driver.session(DB_NAME, TypeDBSession.Type.DATA);
              TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.WRITE)) {
@@ -191,7 +200,8 @@ public class Main {
             return false;
         }
     }
-
+    // end::delete[]
+    // tag::db-setup[]
     private static boolean dbSetup(TypeDBDriver driver, String dbName, boolean reset) {
         System.out.println("Setting up the database: " + dbName);
         boolean newDatabase = createNewDatabase(driver, dbName, reset);
@@ -211,7 +221,8 @@ public class Main {
             return testInitialDatabase(session);
         }
     }
-
+    // end::db-setup[]
+    // tag::create_new_db[]
     private static boolean createNewDatabase(TypeDBDriver driver, String dbName, boolean dbReset) {
         if (driver.databases().contains(dbName)) {
             if (dbReset) {
@@ -244,7 +255,8 @@ public class Main {
             return true;
         }
     }
-
+    // end::create_new_db[]
+    // tag::db-schema-setup[]
     private static void dbSchemaSetup(TypeDBSession session) {
         String schemaFile = "iam-schema.tql";
         try (TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.WRITE)) {
@@ -257,7 +269,8 @@ public class Main {
             throw new RuntimeException("Failed to read schema file.", e);
         }
     }
-
+    // tag::db-schema-setup[]
+    // tag::db-dataset-setup[]
     private static void dbDatasetSetup(TypeDBSession session) {
         String dataFile = "iam-data-single-query.tql";
         try (TypeDBTransaction tx = session.transaction(TypeDBTransaction.Type.WRITE)) {
@@ -270,7 +283,8 @@ public class Main {
             throw new RuntimeException("Failed to read data file.", e);
         }
     }
-
+    // tag::db-dataset-setup[]
+    // tag::test-db[]
     private static boolean testInitialDatabase(TypeDBSession session) {
         try (TypeDBTransaction transaction = session.transaction(TypeDBTransaction.Type.READ)) {
             String testQuery = "match $u isa user; get $u; count;";
@@ -285,4 +299,7 @@ public class Main {
             }
         }
     }
+    // end::test-db[]
 }
+// tag::class-main[]
+// tag::code[]
