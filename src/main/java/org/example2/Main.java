@@ -1,9 +1,6 @@
 package org.example2;
 
-import com.vaticle.typedb.driver.api.TypeDBDriver;
-import com.vaticle.typedb.driver.api.TypeDBOptions;
-import com.vaticle.typedb.driver.api.TypeDBSession;
-import com.vaticle.typedb.driver.api.TypeDBTransaction;
+import com.vaticle.typedb.driver.api.*;
 import com.vaticle.typedb.driver.api.answer.ConceptMap;
 import com.vaticle.typedb.driver.TypeDB;
 import com.vaticle.typedb.driver.api.answer.JSON;
@@ -22,8 +19,15 @@ public class Main {
     private static final String DB_NAME = "sample_app_db";
     private static final String SERVER_ADDR = "127.0.0.1:1729";
 
+    public enum Edition {
+    CORE,
+    CLOUD
+    }
+
+    private static final Edition TYPEDB_EDITION = Edition.CORE;
+
     public static void main(String[] args) {
-        try (TypeDBDriver driver = TypeDB.coreDriver(SERVER_ADDR)) {
+        try (TypeDBDriver driver = connection(TYPEDB_EDITION, SERVER_ADDR)) {
             if (dbSetup(driver, DB_NAME, false)) {
                 System.out.println("Setup complete.");
             } else {
@@ -64,6 +68,15 @@ public class Main {
         }
     }
 
+    private static TypeDBDriver connection(Edition edition, String addr) {
+        if (edition == Edition.CORE) {
+            return TypeDB.coreDriver(addr);
+        };
+        if (edition == Edition.CLOUD) {
+            return TypeDB.cloudDriver("127.0.0.1:1729", new TypeDBCredential("admin", "password", true ));
+        };
+        return null;
+    }
 
     private static List<JSON> fetchAllUsers(TypeDBDriver driver) {
         try (TypeDBSession session = driver.session(DB_NAME, TypeDBSession.Type.DATA)) {
