@@ -30,7 +30,7 @@ public class Main {
     // end::constants[]
     // tag::main[]
     public static void main(String[] args) {
-        try (TypeDBDriver driver = connection(TYPEDB_EDITION, SERVER_ADDR)) {
+        try (TypeDBDriver driver = connectToTypedb(TYPEDB_EDITION, SERVER_ADDR)) {
             if (dbSetup(driver, DB_NAME, false)) {
                 System.out.println("Setup complete.");
             } else {
@@ -72,7 +72,7 @@ public class Main {
     }
     // end::main[]
     // tag::connection[]
-    private static TypeDBDriver connection(Edition edition, String addr) {
+    private static TypeDBDriver connectToTypedb(Edition edition, String addr) {
         if (edition == Edition.CORE) {
             return TypeDB.coreDriver(addr);
         };
@@ -135,7 +135,6 @@ public class Main {
                                                 $pa($o, $va) isa access;
                                                 $va isa action, has name 'view_file';
                                                 get $fp;""", name);
-                // Note: Sorting in the query might not be directly supported; handle sorting in Java if needed
                 tx.query().get(fileQuery).forEach(filePaths::add);
                 filePaths.forEach(path -> System.out.println("File: " + path.get("fp").asAttribute().getValue().toString()));
                 if (filePaths.isEmpty()) {
@@ -166,9 +165,14 @@ public class Main {
                                         insert
                                         $f has path '%s';""", oldPath, newPath);
             response = tx.query().update(query).toList();
-            tx.commit();
-            System.out.println("Path updated from " + oldPath + " to " + newPath);
-            return response;
+            if (!response.isEmpty()) {
+                tx.commit();
+                System.out.println(String.format("Total number of paths updated: %s", response.size()));
+                return response;
+            } else {
+                System.out.println("No matched paths: nothing to update");
+            }
+
         } catch (TypeDBDriverException e) {
             e.printStackTrace();
         }
@@ -269,7 +273,7 @@ public class Main {
             throw new RuntimeException("Failed to read schema file.", e);
         }
     }
-    // tag::db-schema-setup[]
+    // end::db-schema-setup[]
     // tag::db-dataset-setup[]
     private static void dbDatasetSetup(TypeDBSession session) {
         String dataFile = "iam-data-single-query.tql";
@@ -283,7 +287,7 @@ public class Main {
             throw new RuntimeException("Failed to read data file.", e);
         }
     }
-    // tag::db-dataset-setup[]
+    // end::db-dataset-setup[]
     // tag::test-db[]
     private static boolean testInitialDatabase(TypeDBSession session) {
         try (TypeDBTransaction transaction = session.transaction(TypeDBTransaction.Type.READ)) {
