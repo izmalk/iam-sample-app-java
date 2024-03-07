@@ -27,6 +27,8 @@ public class Main {
     }
 
     private static final Edition TYPEDB_EDITION = Edition.CORE;
+    private static final String CLOUD_USERNAME = "admin";
+    private static final String CLOUD_PASSWORD = "password";
     // end::constants[]
     // tag::main[]
     public static void main(String[] args) {
@@ -52,7 +54,6 @@ public class Main {
         String secondRequestMessage = String.format("Request 2 of 6: Request 2 of 6: Add a new user with the full-name \"%s\" and email \"%s\"", name, email);
         System.out.println(secondRequestMessage);
         List<ConceptMap> newUser = insertNewUser(driver, dbName, name, email);
-        // getFilesByUser, updateFilePath, deleteFile
 
         String nameKevin = "Kevin Morrison";
         String thirdRequestMessage = String.format("Request 3 of 6: Find all files that the user \"%s\" has access to view (no inference)", nameKevin);
@@ -80,7 +81,7 @@ public class Main {
             return TypeDB.coreDriver(addr);
         };
         if (edition == Edition.CLOUD) {
-            return TypeDB.cloudDriver("127.0.0.1:1729", new TypeDBCredential("admin", "password", true ));
+            return TypeDB.cloudDriver(addr, new TypeDBCredential(CLOUD_USERNAME, CLOUD_PASSWORD, true ));
         };
         return null;
     }
@@ -211,12 +212,12 @@ public class Main {
     // tag::db-setup[]
     private static boolean dbSetup(TypeDBDriver driver, String dbName, boolean reset) {
         System.out.println("Setting up the database: " + dbName);
-        boolean newDatabase = createNewDatabase(driver, dbName, reset);
+        boolean isNew = tryCreateDatabase(driver, dbName, reset);
         if (!driver.databases().contains(dbName)) {
             System.out.println("Database creation failed. Terminating...");
             return false;
         }
-        if (newDatabase) {
+        if (isNew) {
             try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.SCHEMA)) {
                 dbSchemaSetup(session);
             }
@@ -230,7 +231,7 @@ public class Main {
     }
     // end::db-setup[]
     // tag::create_new_db[]
-    private static boolean createNewDatabase(TypeDBDriver driver, String dbName, boolean dbReset) {
+    private static boolean tryCreateDatabase(TypeDBDriver driver, String dbName, boolean dbReset) {
         if (driver.databases().contains(dbName)) {
             if (dbReset) {
                 System.out.print("Replacing an existing database...");
@@ -247,9 +248,8 @@ public class Main {
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to read schema file.", e);
                 }
-                // String answer = System.console().readLine();
                 if (answer.equalsIgnoreCase("y")) {
-                    return createNewDatabase(driver, dbName, true);
+                    return tryCreateDatabase(driver, dbName, true);
                 } else {
                     System.out.println("Reusing an existing database.");
                     return false;
