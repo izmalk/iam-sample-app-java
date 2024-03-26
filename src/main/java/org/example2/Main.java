@@ -212,34 +212,16 @@ public class Main {
     // tag::db-setup[]
     private static boolean dbSetup(TypeDBDriver driver, String dbName, boolean reset) {
         System.out.println("Setting up the database: " + dbName);
-        boolean isNew = tryCreateDatabase(driver, dbName, reset);
-        if (!driver.databases().contains(dbName)) {
-            System.out.println("Database creation failed. Terminating...");
-            return false;
-        }
-        if (isNew) {
-            try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.SCHEMA)) {
-                dbSchemaSetup(session);
-            }
-            try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
-                dbDatasetSetup(session);
-            }
-        }
-        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
-            return testInitialDatabase(session);
-        }
-    }
-    // end::db-setup[]
-    // tag::create_new_db[]
-    private static boolean tryCreateDatabase(TypeDBDriver driver, String dbName, boolean dbReset) {
         if (driver.databases().contains(dbName)) {
-            if (dbReset) {
-                System.out.print("Replacing an existing database...");
-                driver.databases().get(dbName).delete();
-                driver.databases().create(dbName);
+            if (reset) {
+                System.out.print("Deleting an existing database...");
+                driver.databases().get(dbName).delete();  // Delete the database if it exists already
                 System.out.println("OK");
-                return true;
-            } else { // dbReset = false
+                if (!CreateDatabase(driver,dbName)) {
+                    System.out.println("Creating new database failed. Terminating...");
+                    return false;
+                }
+            } else{
                 System.out.println("Found a pre-existing database. Do you want to replace it? (Y/N) ");
                 String answer;
                 try {
@@ -249,18 +231,46 @@ public class Main {
                     throw new RuntimeException("Failed to read schema file.", e);
                 }
                 if (answer.equalsIgnoreCase("y")) {
-                    return tryCreateDatabase(driver, dbName, true);
+                    System.out.print("Deleting an existing database...");
+                    driver.databases().get(dbName).delete();  // Delete the database if it exists already
+                    System.out.println("OK");
+                    if (!CreateDatabase(driver,dbName)) {
+                        System.out.println("Creating new database failed. Terminating...");
+                        return false;
+                    }
                 } else {
                     System.out.println("Reusing an existing database.");
-                    return false;
+                    return true;
                 }
             }
         } else { // No such database found on the server
-            System.out.print("Creating a new database...");
-            driver.databases().create(dbName);
-            System.out.println("OK");
-            return true;
+            if (!CreateDatabase(driver,dbName)) {
+                System.out.println("Creating a new database failed. Terminating...");
+                return false;
+            }
         }
+        if (driver.databases().contains(dbName)) {
+            try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
+                return dbCheck(session);
+            }
+        } else {
+            System.out.println("Database not found. Terminating...");
+            return false;
+        }
+    }
+    // end::db-setup[]
+    // tag::create_new_db[]
+    private static boolean CreateDatabase(TypeDBDriver driver, String dbName) {
+        System.out.print("Creating a new database...");
+        driver.databases().create(dbName);
+        System.out.println("OK");
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.SCHEMA)) {
+            dbSchemaSetup(session);
+        }
+        try (TypeDBSession session = driver.session(dbName, TypeDBSession.Type.DATA)) {
+            dbDatasetSetup(session);
+        }
+        return true;
     }
     // end::create_new_db[]
     // tag::db-schema-setup[]
@@ -292,7 +302,7 @@ public class Main {
     }
     // end::db-dataset-setup[]
     // tag::test-db[]
-    private static boolean testInitialDatabase(TypeDBSession session) {
+    private static boolean dbCheck(TypeDBSession session) {
         try (TypeDBTransaction transaction = session.transaction(TypeDBTransaction.Type.READ)) {
             String testQuery = "match $u isa user; get $u; count;";
             System.out.print("Testing the database...");
