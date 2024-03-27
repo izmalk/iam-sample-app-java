@@ -218,7 +218,7 @@ public class Main {
                 driver.databases().get(dbName).delete();  // Delete the database if it exists already
                 System.out.println("OK");
                 if (!CreateDatabase(driver,dbName)) {
-                    System.out.println("Creating new database failed. Terminating...");
+                    System.out.println("Failed to create a new database. Terminating...");
                     return false;
                 }
             } else{
@@ -228,14 +228,14 @@ public class Main {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
                     answer = reader.readLine();
                 } catch (IOException e) {
-                    throw new RuntimeException("Failed to read schema file.", e);
+                    throw new RuntimeException("Failed to read user input.", e);
                 }
                 if (answer.equalsIgnoreCase("y")) {
                     System.out.print("Deleting an existing database...");
                     driver.databases().get(dbName).delete();  // Delete the database if it exists already
                     System.out.println("OK");
                     if (!CreateDatabase(driver,dbName)) {
-                        System.out.println("Creating new database failed. Terminating...");
+                        System.out.println("Failed to create a new database. Terminating...");
                         return false;
                     }
                 } else {
@@ -245,7 +245,7 @@ public class Main {
             }
         } else { // No such database found on the server
             if (!CreateDatabase(driver,dbName)) {
-                System.out.println("Creating a new database failed. Terminating...");
+                System.out.println("Failed to create a new database. Terminating...");
                 return false;
             }
         }
@@ -283,7 +283,7 @@ public class Main {
             tx.commit();
             System.out.println("OK");
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read schema file.", e);
+            throw new RuntimeException("Failed to read the schema file.", e);
         }
     }
     // end::db-schema-setup[]
@@ -297,7 +297,7 @@ public class Main {
             tx.commit();
             System.out.println("OK");
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read data file.", e);
+            throw new RuntimeException("Failed to read the data file.", e);
         }
     }
     // end::db-dataset-setup[]
@@ -311,7 +311,7 @@ public class Main {
                 System.out.println("Passed");
                 return true;
             } else {
-                System.out.println("Failed with the result: " + result + "\n Expected result: 3.");
+                System.out.println("Failed the test with the result: " + result + "\n Expected result: 3.");
                 return false;
             }
         }
