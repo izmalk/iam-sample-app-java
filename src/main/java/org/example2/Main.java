@@ -210,10 +210,10 @@ public class Main {
     }
     // end::delete[]
     // tag::db-setup[]
-    private static boolean dbSetup(TypeDBDriver driver, String dbName, boolean reset) {
+    private static boolean dbSetup(TypeDBDriver driver, String dbName, boolean dbReset) {
         System.out.println("Setting up the database: " + dbName);
         if (driver.databases().contains(dbName)) {
-            if (reset) {
+            if (dbReset) {
                 if (!replaceDatabase(driver, dbName)) {
                     return false;
                 }
