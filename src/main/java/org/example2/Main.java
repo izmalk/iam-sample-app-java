@@ -214,11 +214,7 @@ public class Main {
         System.out.println("Setting up the database: " + dbName);
         if (driver.databases().contains(dbName)) {
             if (reset) {
-                System.out.print("Deleting an existing database...");
-                driver.databases().get(dbName).delete();  // Delete the database if it exists already
-                System.out.println("OK");
-                if (!CreateDatabase(driver,dbName)) {
-                    System.out.println("Failed to create a new database. Terminating...");
+                if (!replaceDatabase(driver, dbName)) {
                     return false;
                 }
             } else{
@@ -231,20 +227,15 @@ public class Main {
                     throw new RuntimeException("Failed to read user input.", e);
                 }
                 if (answer.equalsIgnoreCase("y")) {
-                    System.out.print("Deleting an existing database...");
-                    driver.databases().get(dbName).delete();  // Delete the database if it exists already
-                    System.out.println("OK");
-                    if (!CreateDatabase(driver,dbName)) {
-                        System.out.println("Failed to create a new database. Terminating...");
+                    if (!replaceDatabase(driver, dbName)) {
                         return false;
                     }
                 } else {
                     System.out.println("Reusing an existing database.");
-                    return true;
                 }
             }
         } else { // No such database found on the server
-            if (!CreateDatabase(driver,dbName)) {
+            if (!createDatabase(driver,dbName)) {
                 System.out.println("Failed to create a new database. Terminating...");
                 return false;
             }
@@ -260,7 +251,7 @@ public class Main {
     }
     // end::db-setup[]
     // tag::create_new_db[]
-    private static boolean CreateDatabase(TypeDBDriver driver, String dbName) {
+    private static boolean createDatabase(TypeDBDriver driver, String dbName) {
         System.out.print("Creating a new database...");
         driver.databases().create(dbName);
         System.out.println("OK");
@@ -273,6 +264,19 @@ public class Main {
         return true;
     }
     // end::create_new_db[]
+    // tag::replace_db[]
+    private static boolean replaceDatabase(TypeDBDriver driver, String dbName) {
+        System.out.print("Deleting an existing database...");
+        driver.databases().get(dbName).delete();  // Delete the database if it exists already
+        System.out.println("OK");
+        if (createDatabase(driver,dbName)) {
+            return true;
+        } else {
+            System.out.println("Failed to create a new database. Terminating...");
+            return false;
+        }
+    }
+    // end::replace_db[]
     // tag::db-schema-setup[]
     private static void dbSchemaSetup(TypeDBSession session) {
         String schemaFile = "iam-schema.tql";
